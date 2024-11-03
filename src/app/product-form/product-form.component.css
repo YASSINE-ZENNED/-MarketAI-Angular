@@ -1,4 +1,16 @@
+body {
+    background-image: url('./—Pngtree—flourishing e commerce industry 3d_5818531 (1).jpg'); /* Replace with your image path */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    margin: 0;
+    font-family: 'Open Sans', sans-serif;
+    color: #fff;
+  }
+
 .upload-form {
+
   max-width: 100%;
   text-align: center;
 }

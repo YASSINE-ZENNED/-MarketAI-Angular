@@ -6,7 +6,8 @@ import { catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { NgIf } from '@angular/common';
 import {EditorConfig, NgxSimpleTextEditorModule, ST_BUTTONS} from 'ngx-simple-text-editor';
-import { CKEditorModule } from '@ckeditor/ckeditor5-angular';
+
+import {ChangeEvent, CKEditorModule} from '@ckeditor/ckeditor5-angular';
 import {
   ClassicEditor,
   Bold,
@@ -34,6 +35,8 @@ import 'ckeditor5/ckeditor5.css';
   styleUrls: ['./product-form.component.css'],
 })
 export class ProductFormComponent {
+  retrieveddata: string = "";
+
   productForm: FormGroup;
   imagePreview: string | ArrayBuffer | null = null;
   imageUploaded = false;
@@ -47,7 +50,8 @@ export class ProductFormComponent {
     placeholder: 'Type something...',
     buttons: ST_BUTTONS,
   };
-
+  disc:any;
+  ImageURL:string | undefined;
   public Editor = ClassicEditor;
   public config = {
     toolbar: [
@@ -81,17 +85,25 @@ export class ProductFormComponent {
       description: ['', Validators.required],
     });
   }
+  public onChange({ editor }: ChangeEvent) {
+    const data = editor.getData();
+    this.retrieveddata=data;
+  }
 
   onFileSelected(event: Event) {
-    const file = (event.target as HTMLInputElement).files![0];
-    if (file) {
+    const fileInput = event.target as HTMLInputElement;
+
+    if (fileInput.files && fileInput.files[0]) {
+      const file = fileInput.files[0];
+      this.selectedFile = file; // Save the file for upload purposes
+
+      // Read the image file and create a preview URL
       const reader = new FileReader();
       reader.onload = () => {
-        this.imagePreview = reader.result;
-        this.imageUploaded = true;
-        this.selectedFile = file;
+        this.imagePreview = reader.result; // Set the image preview
+        this.imageUploaded = true; // Mark image as uploaded to show the preview
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(file); // Convert to data URL
     }
   }
 
@@ -115,7 +127,14 @@ export class ProductFormComponent {
       formData.append('image', this.selectedFile);
       formData.append('keywords', this.keywords);
 
-      await this.http.post('http://localhost:8080/DescribeForClient', formData)
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', this.selectedFile);
+      const uploadResponse = await this.http.post('http://localhost:8080/S3/upload', uploadFormData, { responseType: 'text' }).toPromise();
+      this.ImageURL=uploadResponse;
+      console.log('File Upload Response:', uploadResponse);
+
+
+       this.http.post('http://localhost:8080/DescribeForClient', formData)
         .pipe(
           catchError(error => {
             console.error('Error occurred:', error);
@@ -125,6 +144,8 @@ export class ProductFormComponent {
         .subscribe(response => {
           console.log("************************************* hello we in ************************************* ")
           console.log('API Response:', response);  // Log the response from the API
+          this.disc=response;
+
           this.populateForm(response);  // Populate the form with response data
           this.formVisible = true;  // Show the form when the response is received
         });
@@ -133,6 +154,7 @@ export class ProductFormComponent {
       alert('Please enter some keywords and upload an image.');
     }
   }
+
 
   populateForm(response: any): void {
     // Create a bulleted list for key features
@@ -144,8 +166,9 @@ export class ProductFormComponent {
     <p>${response.description}</p>
     <h2>Key Features:</h2>
     <ul>${keyFeaturesList}</ul>
+    <p>Condition:${response.isNew ? "New" : "Used"}</p>
+
     <p>Price: ${response.price.replace('$', '')}</p>
-    <p style="font-size: small; color: gray;">*Price may not be accurate.</p> <!-- Disclaimer for price -->
   `.trim(); // Remove any leading/trailing whitespace
 
     // Patch the values to the form
@@ -155,12 +178,19 @@ export class ProductFormComponent {
       description: formattedData, // Set the formatted data to description
     });
 
-    // Set the data to the CKEditor
+    this.retrieveddata=formattedData;
     this.data = formattedData; // Assuming you have a 'data' property for the CKEditor
   }
 
 
-
+  formatItemDetails(item: any): string {
+    return `Name:\n${item.name || "N/A"}\n\n` +
+      `Description:\n${item.description || "N/A"}\n\n` +
+      `Key Features:\n${item.KeyFeatures && item.KeyFeatures.length > 0 ?
+        "- " + item.KeyFeatures.join("\n- ") : "No key features available"}\n\n` +
+      `Condition:\n${item.isNew ? "New" : "Used"}\n\n` +
+      `Price:\n${item.price || "N/A"}`;
+  }
 
   onSubmit(): void {
     if (this.productForm.valid) {
@@ -169,4 +199,86 @@ export class ProductFormComponent {
       // Here you would send the form data to the backend
     }
   }
+   stripHtml = (text: string): string => text.replace(/<\/?[^>]+(>|$)/g, "").trim();
+
+  async  onPost() {
+    // Encode the parameters for use in a URL
+    console.log("//////////////////////////////////////////////")
+    // Assuming 'tempDiv' is created and 'this.retrieveddata' contains the HTML string
+    console.log(this.retrieveddata);
+
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = this.retrieveddata;
+
+// Extract each section based on tag structure
+    // @ts-ignore
+    const name = tempDiv.querySelector("h1")?.textContent.trim() || "N/A";
+
+// Extract the description from the first <p> element
+    // @ts-ignore
+    const description = tempDiv.querySelector("p")?.textContent.trim() || "N/A";
+
+// Extract key features from the <ul> list items
+    // @ts-ignore
+    const keyFeaturesList = Array.from(tempDiv.querySelectorAll("ul li")).map(li => li.textContent.trim());
+
+// Extract condition using regex
+    const conditionMatch = this.retrieveddata.match(/Condition:\s*(\w+)/i);
+    const condition = conditionMatch ? conditionMatch[1].trim() : "N/A";
+
+// Extract price using regex
+    const priceMatch = this.retrieveddata.match(/Price:\s*([^\s<]+)/i);  // Match until whitespace or HTML tag
+    const price = priceMatch ? priceMatch[1].trim() : "N/A";
+
+// Format the extracted data
+    const formattedData = `
+Name: ${name}
+
+Description: ${description}
+
+Key Features:
+- ${keyFeaturesList.join("\n- ")}
+
+Condition: ${condition}
+
+Price: ${price}
+`;
+
+// Output the formatted data
+
+
+// Output the formatted data
+    console.log(formattedData);
+    console.log("*****************************************")
+
+    console.log("//////////////////////////////////////////////")
+
+    const imageUrl = this.ImageURL;
+
+    // Construct the full URL with query parameters
+    const url = `https://mrp.app.n8n.cloud/webhook-test/232db240-e4b5-480d-9ab5-e33c00e1991c?Name=${name}&description=${description}&keyfeatures=${keyFeaturesList}&condition=${condition}&price=${price}&imageUrl=${imageUrl}`;
+
+    try {
+      // Make the GET request with the parameters in the URL
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      console.log("//////////////////////////////////////////////")
+
+      // Check for success
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Response from server:", result);
+      } else {
+        console.error("Failed to send data:", response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error("Error during fetch:", error);
+    }
+  }
+
+
 }

@@ -41,7 +41,9 @@
 
         <!-- Right column for CKEditor -->
         <div *ngIf="formVisible" class="right-column">
-          <ckeditor [editor]="Editor" [config]="config" [data]="data"></ckeditor>
+          <ckeditor [editor]="Editor" [config]="config" [data]="data" (change)="onChange($event)" ></ckeditor>
+          <button type="button" (click)="onPost()">Post on FB page</button>
+
         </div>
       </div>
     </div>
