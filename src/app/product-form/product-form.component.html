@@ -1,51 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <link
-    rel="stylesheet"
-    type="text/css"
-    href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
-  />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MarketAI</title>
 </head>
+<body>
+<video autoplay muted loop id="background-video">
+  <source src="./app/vecteezy_global-connection-network-ai-line-circuit-technology-data_9167281.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
-<form class="upload-form" [formGroup]="productForm" (ngSubmit)="onSubmit()">
+<div *ngIf="isLoading" class="spinner-overlay">
+  <span class="loader"></span>
+  <p class="loading-text">Cooking the best description for this item...</p>
+
+</div>
+
+<div class="center-container">
   <h1>Upload File</h1>
 
+  <label for="file" class="upload-label" (dragover)="handleDragOver($event)" (drop)="handleDrop($event)">
+    <i class="ph ph-upload"></i>
+    <span>
+        Drag & drop or <span class="browse-text">browse</span> your files
+      </span>
+  </label>
+  <form class="upload-form" [formGroup]="productForm" (ngSubmit)="onSubmit()">
     <!-- Left column for image and keywords input -->
-    <div class="left-column">
-      <label for="file" class="upload-label" (dragover)="handleDragOver($event)" (drop)="handleDrop($event)">
-        <i class="ph ph-upload"></i>
-        <span>
-          Drag & drop or <span class="browse-text">browse</span> your files
-        </span>
-      </label>
+    <div class="split-container">
+      <div class="left-column">
+        <input id="file" type="file" name="file" (change)="onFileSelected($event)" style="display: none;" />
 
-      <input id="file" type="file" name="file" (change)="onFileSelected($event)" style="display: none;" />
-
-      <div class="split-container">
-        <!-- Left column for keywords input and image display -->
-        <div class="left-column">
-          <div *ngIf="imageUploaded" class="image-preview">
-            <!-- Keywords input positioned above the image -->
-            <div class="keywords-section">
-              <label for="keywords">Keywords</label>
-              <input id="keywords" type="text" [(ngModel)]="keywords" placeholder="brand, model..." />
-              <button type="button" (click)="onGenerate()">Generate</button>
-            </div>
-
-
-            <!-- Image display with fixed size -->
-            <img class="align-left" [src]="imagePreview"   />
-
-
+        <div *ngIf="imageUploaded" class="image-preview">
+          <div class="keywords-section">
+            <label for="keywords">Keywords  :  </label>
+            <input id="keywords" type="text" [(ngModel)]="keywords" placeholder="brand, model..." />
+            <button type="button" (click)="onGenerate()">Generate</button>
           </div>
-        </div>
 
-        <!-- Right column for CKEditor -->
-        <div *ngIf="formVisible" class="right-column">
-          <ckeditor [editor]="Editor" [config]="config" [data]="data" (change)="onChange($event)" ></ckeditor>
-          <button type="button" (click)="onPost()">Post on FB page</button>
-
+          <img class="align-left" [src]="imagePreview" />
         </div>
       </div>
-    </div>
-</form>
 
+      <div *ngIf="formVisible" class="right-column">
+        <ckeditor [editor]="Editor" [config]="config" [data]="data" (change)="onChange($event)"></ckeditor>
+        <button type="button" (click)="onPost()">Post on FB page</button>
+      </div>
+    </div>
+  </form>
+</div>
+</body>

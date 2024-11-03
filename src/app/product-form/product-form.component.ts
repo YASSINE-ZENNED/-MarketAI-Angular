@@ -36,6 +36,7 @@ import 'ckeditor5/ckeditor5.css';
 })
 export class ProductFormComponent {
   retrieveddata: string = "";
+  public isLoading: boolean = false; // Flag for spinner visibility
 
   productForm: FormGroup;
   imagePreview: string | ArrayBuffer | null = null;
@@ -121,6 +122,7 @@ export class ProductFormComponent {
 
   async onGenerate(): Promise<void> {
     console.log('Keywords:', this.keywords);
+    this.isLoading = true; // Show the spinner
 
     if ( this.selectedFile) {
       const formData = new FormData();
@@ -148,10 +150,14 @@ export class ProductFormComponent {
 
           this.populateForm(response);  // Populate the form with response data
           this.formVisible = true;  // Show the form when the response is received
+          this.isLoading = false; // Hide the spinner
+
         });
 
     } else {
       alert('Please enter some keywords and upload an image.');
+      this.isLoading = false; // Hide the spinner
+
     }
   }
 
@@ -212,7 +218,7 @@ export class ProductFormComponent {
 
 // Extract each section based on tag structure
     // @ts-ignore
-    const name = tempDiv.querySelector("h1")?.textContent.trim() || "N/A";
+    const name = tempDiv.querySelector("h2")?.textContent.trim() || "N/A";
 
 // Extract the description from the first <p> element
     // @ts-ignore
